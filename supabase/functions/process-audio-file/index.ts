@@ -4,12 +4,11 @@
 
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// import { createClient} from "@deepgram/sdk"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import { corsHeaders } from "../_shared/cors.ts"
 
-console.log("Hello from Functions!")
-
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -22,9 +21,28 @@ serve(async (req) => {
       throw new Error('No authorization header')
     }
 
-    const { filename, _storage_path } = await req.json()
+    const { filename, storage_path } = await req.json()
 
-    console.log("Processing audio file in EdgeFunction:", filename);
+    console.log(`Processing audio file in EdgeFunction: filename: ${filename}, storage_path: ${storage_path}`);
+
+    console.log('In function transcribeFile creating supabase client');
+    const supabaseClient = createClient(
+      // Supabase API URL - env var exported by default.
+      Deno.env.get('SUPABASE_URL') ?? '',
+      // Supabase API ANON KEY - env var exported by default.
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      // Create client with Auth context of the user that called the function.
+      // This way your row-level-security (RLS) policies are applied.
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+
+    await transcribeFile(supabaseClient);
+    console.log(`Transcribed file ${filename}`);
     return new Response(
       JSON.stringify({ message: 'Processing started' }),
       { 
@@ -50,6 +68,15 @@ serve(async (req) => {
     )
   }
 })
+
+async function transcribeFile(supabaseClient: SupabaseClient) {
+  // And we can run queries in the context of our authenticated user
+  console.log('In function transcribeFile getting audio file uploads');
+  const { data, error } = await supabaseClient.from('audio_uploads').select('*');
+  if (error) throw error
+
+  console.log(`In function transcribeFile data: ${data}`);
+};
 
 /* To invoke locally:
 

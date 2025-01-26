@@ -1,3 +1,6 @@
 {
-  "imports": {}
+  "imports": {
+    "@deepgram/sdk": "npm:@deepgram/sdk@^3.9.0",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.48.1"
+  }
 }
