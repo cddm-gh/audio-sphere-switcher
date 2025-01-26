@@ -104,7 +104,7 @@ async function transcribeFile(audioFile: Blob): Promise<string> {
     diarize: true,
     paragraphs: true,
     punctuate: true,
-    language: "es-419",
+    detect_language: true,
   });
 
   // Process and create formatted output
