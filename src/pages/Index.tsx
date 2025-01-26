@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Mic, Upload, Sun, Moon, Pause, Square, Loader2, Play, Check } from "lucide-react";
+import { Mic, Upload, Pause, Square, Loader2, Play, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { Navbar } from "@/components/Navbar";
 
 interface AudioFile {
   id: string;
@@ -277,13 +278,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
+      <Navbar theme={theme} toggleTheme={toggleTheme} />
+      
       <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-end mb-6">
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </Button>
-        </div>
-
         {uploadProgress > 0 && (
           <div className="mb-6 space-y-2">
             <Progress 
