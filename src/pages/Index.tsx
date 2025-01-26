@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Mic, Upload, Sun, Moon, Pause, Square } from "lucide-react";
+import { Mic, Upload, Sun, Moon, Pause, Square, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +17,8 @@ const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isUploading, setIsUploading] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isRecordingComplete, setIsRecordingComplete] = useState(false);
 
   useEffect(() => {
     // Check current session
@@ -60,11 +62,14 @@ const Index = () => {
 
       recorder.onstop = () => {
         setAudioChunks(chunks);
+        setIsRecordingComplete(true);
       };
 
       setMediaRecorder(recorder);
       recorder.start();
       setIsRecording(true);
+      setIsPaused(false);
+      setIsRecordingComplete(false);
       toast({
         title: "Recording started",
         description: "Speak into your microphone",
@@ -78,14 +83,29 @@ const Index = () => {
     }
   };
 
+  const pauseRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.resume();
+      setIsPaused(false);
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorder && isRecording) {
       mediaRecorder.stop();
       mediaRecorder.stream.getTracks().forEach((track) => track.stop());
       setIsRecording(false);
+      setIsPaused(false);
       toast({
-        title: "Recording stopped",
-        description: "Your audio has been recorded",
+        title: "Recording completed",
+        description: "Your audio is ready to upload",
       });
     }
   };
@@ -228,31 +248,76 @@ const Index = () => {
               <CardTitle>Record Audio</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-col items-center gap-4">
                 {!isRecording ? (
-                  <Button onClick={startRecording}>
-                    <Mic className="mr-2 h-4 w-4" />
-                    Start Recording
+                  <Button 
+                    size="lg" 
+                    className="w-16 h-16 rounded-full"
+                    onClick={startRecording}
+                  >
+                    <Mic className="h-6 w-6" />
                   </Button>
                 ) : (
-                  <>
-                    <Button variant="outline" onClick={stopRecording}>
-                      <Pause className="mr-2 h-4 w-4" />
-                      Pause
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-12 h-12 rounded-full"
+                      onClick={isPaused ? resumeRecording : pauseRecording}
+                    >
+                      {isPaused ? (
+                        <Play className="h-6 w-6" />
+                      ) : (
+                        <Pause className="h-6 w-6" />
+                      )}
                     </Button>
-                    <Button variant="destructive" onClick={stopRecording}>
-                      <Square className="mr-2 h-4 w-4" />
-                      Stop
+                    
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="w-12 h-12 rounded-full relative"
+                      onClick={stopRecording}
+                    >
+                      <Square className="h-6 w-6" />
                     </Button>
-                  </>
+
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="text-sm font-medium">
+                        {isPaused ? "Paused" : "Recording..."}
+                      </div>
+                      {!isPaused && (
+                        <div className="flex items-center text-xs text-muted-foreground gap-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                          </span>
+                          Live
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {isRecordingComplete && (
+                  <Button 
+                    variant="secondary" 
+                    onClick={handleUploadRecording}
+                    className="gap-2"
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload Recording
+                      </>
+                    )}
+                  </Button>
                 )}
               </div>
-              {audioChunks.length > 0 && (
-                <Button onClick={handleUploadRecording} className="w-full">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Recording
-                </Button>
-              )}
             </CardContent>
           </Card>
 
