@@ -24,24 +24,49 @@ A web application that allows users to record or upload audio files and automati
 
 ## Prerequisites
 
-- Node.js & npm - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Deno - [install instructions](https://deno.land/manual/getting_started/installation)
 - Supabase account
 - Deepgram API key
 
 ## Environment Variables
 
-Create a `.env` file in the root directory:
-
-```env
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_SUPABASE_FUNCTIONS_URL=your_supabase_functions_url
-```
-
 For the Supabase Edge Function:
 
 ```bash
-supabase secrets set DEEPGRAM_API_KEY=your_deepgram_api_key
+supabase secrets set --env-file .env
+```
+
+Create a `.env` file:
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+DEEPGRAM_API_KEY=your_deepgram_api_key
+```
+
+## Local Development
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd <project-directory>
+```
+
+2. Start the Edge Function locally:
+```bash
+supabase start
+deno task dev
+```
+
+3. Deploy the Edge Function:
+```bash
+supabase functions deploy process-audio-file
+```
+
+## Testing
+
+Run tests with:
+```bash
+deno test
 ```
 
 ## Database Schema
@@ -56,25 +81,6 @@ create table audio_uploads (
   transcribed boolean default false,
   transcription text
 );
-```
-
-## Local Development
-
-1. Clone and install dependencies:
-```bash
-git clone <repository-url>
-cd <project-directory>
-npm install
-```
-
-2. Deploy the Edge Function:
-```bash
-supabase functions deploy process-audio-file
-```
-
-3. Start the development server:
-```bash
-npm run dev
 ```
 
 ## Usage
