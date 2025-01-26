@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Navbar } from "@/components/Navbar";
+import "@/styles/audio.css";
 
 interface AudioFile {
   id: string;
@@ -18,45 +19,6 @@ interface AudioFile {
   transcription?: string;
   user_id: string;
 }
-
-// Add this CSS to style the audio controls
-const audioStyles = `
-  .custom-audio::-webkit-media-controls-panel {
-    background-color: var(--background);
-  }
-  .custom-audio::-webkit-media-controls-current-time-display,
-  .custom-audio::-webkit-media-controls-time-remaining-display {
-    color: var(--foreground);
-  }
-  .custom-audio::-webkit-media-controls-timeline {
-    background-color: var(--muted);
-    border-radius: 2px;
-  }
-  .custom-audio::-webkit-media-controls-play-button,
-  .custom-audio::-webkit-media-controls-mute-button {
-    color: var(--foreground);
-  }
-  .custom-audio::-webkit-media-controls-volume-slider {
-    background-color: var(--muted);
-    border-radius: 2px;
-  }
-  /* Style the played portion of the timeline */
-  .custom-audio::-webkit-media-controls-timeline::-webkit-slider-thumb {
-    background-color: var(--primary);
-  }
-  .custom-audio::-webkit-media-controls-timeline::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, var(--primary) var(--value, 0%), var(--muted) var(--value, 0%));
-  }
-  /* Hide unnecessary controls */
-  .custom-audio::-webkit-media-controls-seek-back-button,
-  .custom-audio::-webkit-media-controls-seek-forward-button,
-  .custom-audio::-webkit-media-controls-fullscreen-button,
-  .custom-audio::-webkit-media-controls-rewind-button,
-  .custom-audio::-webkit-media-controls-return-to-realtime-button,
-  .custom-audio::-webkit-media-controls-toggle-closed-captions-button {
-    display: none;
-  }
-`;
 
 const Index = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -337,7 +299,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      <style>{audioStyles}</style>
       <Navbar theme={theme} toggleTheme={toggleTheme} />
       
       <div className="container mx-auto px-4 py-8">

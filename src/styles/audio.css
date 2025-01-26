@@ -1,0 +1,35 @@
+.custom-audio::-webkit-media-controls-panel {
+  background-color: var(--background);
+}
+.custom-audio::-webkit-media-controls-current-time-display,
+.custom-audio::-webkit-media-controls-time-remaining-display {
+  color: var(--foreground);
+}
+.custom-audio::-webkit-media-controls-timeline {
+  background-color: var(--muted);
+  border-radius: 2px;
+}
+.custom-audio::-webkit-media-controls-play-button,
+.custom-audio::-webkit-media-controls-mute-button {
+  color: var(--foreground);
+}
+.custom-audio::-webkit-media-controls-volume-slider {
+  background-color: var(--muted);
+  border-radius: 2px;
+}
+/* Style the played portion of the timeline */
+.custom-audio::-webkit-media-controls-timeline::-webkit-slider-thumb {
+  background-color: var(--primary);
+}
+.custom-audio::-webkit-media-controls-timeline::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, var(--primary) var(--value, 0%), var(--muted) var(--value, 0%));
+}
+/* Hide unnecessary controls */
+.custom-audio::-webkit-media-controls-seek-back-button,
+.custom-audio::-webkit-media-controls-seek-forward-button,
+.custom-audio::-webkit-media-controls-fullscreen-button,
+.custom-audio::-webkit-media-controls-rewind-button,
+.custom-audio::-webkit-media-controls-return-to-realtime-button,
+.custom-audio::-webkit-media-controls-toggle-closed-captions-button {
+  display: none;
+}
