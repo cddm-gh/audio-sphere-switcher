@@ -4,7 +4,7 @@
 
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-// import { createClient} from "@deepgram/sdk"
+import { createClient as createDeepgramClient } from "@deepgram/sdk"
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import { corsHeaders } from "../_shared/cors.ts"
 
@@ -14,22 +14,18 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const { filename, storage_path } = await req.json()
   try {
-    // Get auth token from request
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       throw new Error('No authorization header')
     }
 
-    const { filename, storage_path } = await req.json()
-
     console.log(`Processing audio file in EdgeFunction: filename: ${filename}, storage_path: ${storage_path}`);
 
-    console.log('In function transcribeFile creating supabase client');
+    console.log('Creating supabase client');
     const supabaseClient = createClient(
-      // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
-      // Supabase API ANON KEY - env var exported by default.
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       // Create client with Auth context of the user that called the function.
       // This way your row-level-security (RLS) policies are applied.
@@ -40,11 +36,11 @@ Deno.serve(async (req) => {
       }
     );
 
-
-    await transcribeFile(supabaseClient);
-    console.log(`Transcribed file ${filename}`);
+    const audioFile = await getAudioFile(supabaseClient, storage_path);
+    await transcribeFile(audioFile);
+    console.log(`Processing file ${filename} completed.`);
     return new Response(
-      JSON.stringify({ message: 'Processing started' }),
+      JSON.stringify({ message: 'Processing Completed' }),
       { 
         headers: {
           ...corsHeaders,
@@ -56,6 +52,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+    console.error(`Error processing file ${filename}: ${JSON.stringify(error)}`);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { 
@@ -63,29 +60,35 @@ Deno.serve(async (req) => {
           ...corsHeaders,
           'Content-Type': 'application/json',
         },
-        status: 400,
+        status: (error as { status?: number })?.status ?? 500,
       },
     )
   }
 })
 
-async function transcribeFile(supabaseClient: SupabaseClient) {
-  // And we can run queries in the context of our authenticated user
-  console.log('In function transcribeFile getting audio file uploads');
-  const { data, error } = await supabaseClient.from('audio_uploads').select('*');
-  if (error) throw error
+async function transcribeFile(audioFile: Blob) {
+  console.log('Transcribing Audio File');
+  const deepgramClient = createDeepgramClient(Deno.env.get('DEEPGRAM_API_KEY') ?? '');
+  const readableStream = audioFile.stream();
+  
+  const transcription = await deepgramClient.listen.prerecorded.transcribeFile(readableStream, {
+    model: "nova-2",
+    smart_format: true,
+    dictation: true,
+    diarize: true,
+    paragraphs: true,
+    punctuate: true,
+    language: "es-419",
+  });
+  console.log(`Transcription: ${JSON.stringify(transcription)}`);
+}
 
-  console.log(`In function transcribeFile data: ${data}`);
-};
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/process-audio-file' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
-
-*/
+async function getAudioFile(supabaseClient: SupabaseClient, storage_path: string) {
+  console.log(`Getting Audio File ${storage_path}`);
+  const { data: audioFile, error } = await supabaseClient.storage.from('audio').download(storage_path);
+  if (error) {
+    console.error(`Error downloading audio file ${storage_path}: ${error}`);
+    throw error
+  }
+  return audioFile;
+}
