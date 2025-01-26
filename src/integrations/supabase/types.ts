@@ -15,6 +15,8 @@ export type Database = {
           filename: string
           id: string
           storage_path: string
+          transcribed: boolean
+          transcription: string | null
           user_id: string
         }
         Insert: {
@@ -22,6 +24,8 @@ export type Database = {
           filename: string
           id?: string
           storage_path: string
+          transcribed?: boolean
+          transcription?: string | null
           user_id: string
         }
         Update: {
@@ -29,6 +33,8 @@ export type Database = {
           filename?: string
           id?: string
           storage_path?: string
+          transcribed?: boolean
+          transcription?: string | null
           user_id?: string
         }
         Relationships: []
