@@ -7,6 +7,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient as createDeepgramClient } from "@deepgram/sdk"
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
 import { corsHeaders } from "../_shared/cors.ts"
+import { Buffer } from "node:buffer";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -92,9 +93,11 @@ Deno.serve(async (req) => {
 async function transcribeFile(audioFile: Blob): Promise<string> {
   console.log('Transcribing Audio File');
   const deepgramClient = createDeepgramClient(Deno.env.get('DEEPGRAM_API_KEY') ?? '');
-  const readableStream = audioFile.stream();
   
-  const { result: transcription } = await deepgramClient.listen.prerecorded.transcribeFile(readableStream, {
+  // Convert Blob to ArrayBuffer then to Buffer
+  const buffer = Buffer.from(await audioFile.arrayBuffer());
+  
+  const { result: transcription } = await deepgramClient.listen.prerecorded.transcribeFile(buffer, {
     model: "nova-2",
     smart_format: true,
     dictation: true,
