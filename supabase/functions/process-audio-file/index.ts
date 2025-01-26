@@ -37,7 +37,30 @@ Deno.serve(async (req) => {
     );
 
     const audioFile = await getAudioFile(supabaseClient, storage_path);
-    await transcribeFile(audioFile);
+    const fileTranscription = await transcribeFile(audioFile);
+
+    // Save transcription to supabase
+    console.log(`Updating transcription for ${filename} with text: ${fileTranscription.substring(0, 100)}...`);
+    const { data: updatedData, error: transcriptionError } = await supabaseClient
+      .from('audio_uploads')
+      .update({
+        transcribed: true,
+        transcription: fileTranscription,
+      })
+      .eq('filename', filename)
+      .select();
+
+    if (transcriptionError) {
+      console.error(`Error saving transcription to supabase: ${JSON.stringify(transcriptionError)}`);
+      throw transcriptionError;
+    }
+
+    if (!updatedData || updatedData.length === 0) {
+      throw new Error(`No rows updated for filename: ${filename}`);
+    }
+
+    console.log(`Updated ${filename} with data: ${JSON.stringify(updatedData)}`);
+
     console.log(`Processing file ${filename} completed.`);
     return new Response(
       JSON.stringify({ message: 'Processing Completed' }),
@@ -66,12 +89,12 @@ Deno.serve(async (req) => {
   }
 })
 
-async function transcribeFile(audioFile: Blob) {
+async function transcribeFile(audioFile: Blob): Promise<string> {
   console.log('Transcribing Audio File');
   const deepgramClient = createDeepgramClient(Deno.env.get('DEEPGRAM_API_KEY') ?? '');
   const readableStream = audioFile.stream();
   
-  const transcription = await deepgramClient.listen.prerecorded.transcribeFile(readableStream, {
+  const { result: transcription } = await deepgramClient.listen.prerecorded.transcribeFile(readableStream, {
     model: "nova-2",
     smart_format: true,
     dictation: true,
@@ -80,7 +103,13 @@ async function transcribeFile(audioFile: Blob) {
     punctuate: true,
     language: "es-419",
   });
-  console.log(`Transcription: ${JSON.stringify(transcription)}`);
+
+  // Process and create formatted output
+  const paragraphs = transcription?.results?.channels?.[0]?.alternatives?.[0].paragraphs?.paragraphs;
+  const formattedText = paragraphs ?.map(p => `Speaker ${p.speaker}: ${p.sentences.map(s => s.text).join(' ')}`)
+            .join('\n\n') ?? '';
+  console.log(`Transcription: ${formattedText}`);
+  return formattedText;
 }
 
 async function getAudioFile(supabaseClient: SupabaseClient, storage_path: string) {
