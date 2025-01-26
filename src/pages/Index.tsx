@@ -16,6 +16,7 @@ const Index = () => {
   const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     // Check current session
@@ -100,9 +101,21 @@ const Index = () => {
     }
 
     try {
+      setIsUploading(true);
       setUploadProgress(0);
       const fileName = `audio-${Date.now()}.webm`;
       
+      // Simulate progress updates for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 300);
+
       // Upload to storage
       const { data: storageData, error: uploadError } = await supabase.storage
         .from("audio")
@@ -110,6 +123,7 @@ const Index = () => {
           contentType: "audio/webm",
         });
 
+      clearInterval(progressInterval);
       if (uploadError) throw uploadError;
 
       // Create database record
@@ -128,6 +142,47 @@ const Index = () => {
         title: "Success",
         description: "Audio uploaded successfully",
       });
+
+      // Get the access token from the session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const accessToken = currentSession?.access_token;
+
+      if (!accessToken) {
+        throw new Error("No access token available");
+      }
+
+      // Call the edge function to process the audio file
+      const functionUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+      const response = await fetch(
+        `${functionUrl}/v1/process-audio-file`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            filename: fileName,
+            storage_path: storageData.path,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to process audio file");
+      }
+
+      toast({
+        title: "Processing",
+        description: "Your audio file is being processed",
+      });
+      
+      // Reset states after a brief delay
+      setTimeout(() => {
+        setUploadProgress(0);
+        setIsUploading(false);
+      }, 1500);
+      
     } catch (error: any) {
       console.error("Upload error:", error);
       toast({
@@ -135,6 +190,8 @@ const Index = () => {
         description: error.message || "Failed to upload audio",
         variant: "destructive",
       });
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -212,19 +269,41 @@ const Index = () => {
                     onChange={handleFileUpload}
                     className="hidden"
                     id="audio-upload"
+                    disabled={isUploading}
                   />
                   <label
                     htmlFor="audio-upload"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent transition-colors duration-300"
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg transition-all duration-300 ${
+                      isUploading 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'cursor-pointer hover:bg-accent'
+                    }`}
                   >
-                    <Upload className="h-8 w-8 mb-2" />
-                    <span className="text-sm">Click to upload or drag and drop</span>
-                    <span className="text-xs text-muted-foreground">Audio files only</span>
+                    {isUploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2" />
+                        <span className="text-sm">Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 mb-2" />
+                        <span className="text-sm">Click to upload or drag and drop</span>
+                        <span className="text-xs text-muted-foreground">Audio files only</span>
+                      </>
+                    )}
                   </label>
                 </div>
               </div>
               {uploadProgress > 0 && (
-                <Progress value={uploadProgress} className="w-full" />
+                <div className="space-y-2">
+                  <Progress 
+                    value={uploadProgress} 
+                    className="w-full transition-all duration-300"
+                  />
+                  <p className="text-sm text-center text-muted-foreground">
+                    {uploadProgress === 100 ? 'Upload complete!' : `Uploading... ${uploadProgress}%`}
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
