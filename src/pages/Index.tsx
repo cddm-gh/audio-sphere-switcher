@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Mic, Upload, Pause, Square, Loader2, Play, Check } from "lucide-react";
+import { Mic, Upload, Pause, Square, Loader2, Play, Check, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +19,45 @@ interface AudioFile {
   user_id: string;
 }
 
+// Add this CSS to style the audio controls
+const audioStyles = `
+  .custom-audio::-webkit-media-controls-panel {
+    background-color: var(--background);
+  }
+  .custom-audio::-webkit-media-controls-current-time-display,
+  .custom-audio::-webkit-media-controls-time-remaining-display {
+    color: var(--foreground);
+  }
+  .custom-audio::-webkit-media-controls-timeline {
+    background-color: var(--muted);
+    border-radius: 2px;
+  }
+  .custom-audio::-webkit-media-controls-play-button,
+  .custom-audio::-webkit-media-controls-mute-button {
+    color: var(--foreground);
+  }
+  .custom-audio::-webkit-media-controls-volume-slider {
+    background-color: var(--muted);
+    border-radius: 2px;
+  }
+  /* Style the played portion of the timeline */
+  .custom-audio::-webkit-media-controls-timeline::-webkit-slider-thumb {
+    background-color: var(--primary);
+  }
+  .custom-audio::-webkit-media-controls-timeline::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, var(--primary) var(--value, 0%), var(--muted) var(--value, 0%));
+  }
+  /* Hide unnecessary controls */
+  .custom-audio::-webkit-media-controls-seek-back-button,
+  .custom-audio::-webkit-media-controls-seek-forward-button,
+  .custom-audio::-webkit-media-controls-fullscreen-button,
+  .custom-audio::-webkit-media-controls-rewind-button,
+  .custom-audio::-webkit-media-controls-return-to-realtime-button,
+  .custom-audio::-webkit-media-controls-toggle-closed-captions-button {
+    display: none;
+  }
+`;
+
 const Index = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isRecording, setIsRecording] = useState(false);
@@ -32,6 +71,7 @@ const Index = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isRecordingComplete, setIsRecordingComplete] = useState(false);
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Check current session
@@ -93,8 +133,10 @@ const Index = () => {
       };
 
       recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
         setAudioChunks(chunks);
         setIsRecordingComplete(true);
+        setAudioUrl(URL.createObjectURL(blob));
       };
 
       setMediaRecorder(recorder);
@@ -137,10 +179,18 @@ const Index = () => {
       setIsPaused(false);
       toast({
         title: "Recording completed",
-        description: "Your audio is ready to upload",
+        description: "Your audio is ready to preview",
       });
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
 
   const uploadAudio = async (file: File | Blob) => {
     if (!session?.user?.id) {
@@ -272,12 +322,22 @@ const Index = () => {
     }
   };
 
+  const handleStartOver = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioUrl(null);
+    setAudioChunks([]);
+    setIsRecordingComplete(false);
+  };
+
   if (!session) {
     return null; // Don't render anything while checking auth
   }
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
+      <style>{audioStyles}</style>
       <Navbar theme={theme} toggleTheme={toggleTheme} />
       
       <div className="container mx-auto px-4 py-8">
@@ -294,6 +354,50 @@ const Index = () => {
               </p>
             </div>
           </div>
+        )}
+
+        {/* Add Audio Preview */}
+        {audioUrl && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <audio 
+                    src={audioUrl} 
+                    controls 
+                    className="w-full custom-audio"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleStartOver}
+                    title="Start Over"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    onClick={handleUploadRecording}
+                    disabled={isUploading}
+                    className="gap-2"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         <div className="grid gap-6 md:grid-cols-2 mb-8">
