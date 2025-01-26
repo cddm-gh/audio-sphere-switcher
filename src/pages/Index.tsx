@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Mic, Upload, Sun, Moon, Pause, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -12,7 +13,31 @@ const Index = () => {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -65,11 +90,21 @@ const Index = () => {
   };
 
   const uploadAudio = async (file: File | Blob) => {
+    if (!session?.user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to upload audio",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setUploadProgress(0);
       const fileName = `audio-${Date.now()}.webm`;
       
-      const { error: uploadError } = await supabase.storage
+      // Upload to storage
+      const { data: storageData, error: uploadError } = await supabase.storage
         .from("audio")
         .upload(fileName, file, {
           contentType: "audio/webm",
@@ -77,15 +112,27 @@ const Index = () => {
 
       if (uploadError) throw uploadError;
 
+      // Create database record
+      const { error: dbError } = await supabase
+        .from("audio_uploads")
+        .insert({
+          user_id: session.user.id,
+          filename: fileName,
+          storage_path: storageData.path,
+        });
+
+      if (dbError) throw dbError;
+
       setUploadProgress(100);
       toast({
         title: "Success",
         description: "Audio uploaded successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Upload error:", error);
       toast({
         title: "Error",
-        description: "Failed to upload audio",
+        description: error.message || "Failed to upload audio",
         variant: "destructive",
       });
     }
@@ -104,6 +151,10 @@ const Index = () => {
       uploadAudio(audioBlob);
     }
   };
+
+  if (!session) {
+    return null; // Don't render anything while checking auth
+  }
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
