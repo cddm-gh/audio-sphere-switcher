@@ -41,7 +41,7 @@
     "npm:class-variance-authority@~0.7.1": "0.7.1",
     "npm:clsx@^2.1.1": "2.1.1",
     "npm:cmdk@1": "1.0.4_react@18.3.1_react-dom@18.3.1__react@18.3.1_@types+react@18.3.18_@types+react-dom@18.3.5__@types+react@18.3.18",
-    "npm:date-fns@^3.6.0": "3.6.0",
+    "npm:date-fns@^4.1.0": "4.1.0",
     "npm:embla-carousel-react@^8.3.0": "8.5.2_react@18.3.1_embla-carousel@8.5.2",
     "npm:eslint-plugin-react-hooks@^5.1.0-rc.0": "5.1.0_eslint@9.19.0",
     "npm:eslint-plugin-react-refresh@~0.4.9": "0.4.18_eslint@9.19.0",
@@ -1652,6 +1652,9 @@
     "date-fns@3.6.0": {
       "integrity": "sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww=="
     },
+    "date-fns@4.1.0": {
+      "integrity": "sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg=="
+    },
     "debug@4.4.0": {
       "integrity": "sha512-6WTZ/IxCY/T6BALoZHaE4ctp9xm+Z5kY/pzYaCHRFeyVhojxlrm+46y68HA6hr0TcwEssoxNiDEUJQjfPZ/RYA==",
       "dependencies": [
@@ -2355,7 +2358,7 @@
     "react-day-picker@8.10.1_date-fns@3.6.0_react@18.3.1": {
       "integrity": "sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==",
       "dependencies": [
-        "date-fns",
+        "date-fns@3.6.0",
         "react"
       ]
     },
@@ -2931,7 +2934,7 @@
         "npm:class-variance-authority@~0.7.1",
         "npm:clsx@^2.1.1",
         "npm:cmdk@1",
-        "npm:date-fns@^3.6.0",
+        "npm:date-fns@^4.1.0",
         "npm:embla-carousel-react@^8.3.0",
         "npm:eslint-plugin-react-hooks@^5.1.0-rc.0",
         "npm:eslint-plugin-react-refresh@~0.4.9",

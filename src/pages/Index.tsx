@@ -2,10 +2,21 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Mic, Upload, Sun, Moon, Pause, Square, Loader2, Play } from "lucide-react";
+import { Mic, Upload, Sun, Moon, Pause, Square, Loader2, Play, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+
+interface AudioFile {
+  id: string;
+  filename: string;
+  storage_path: string;
+  created_at: string;
+  transcribed: boolean;
+  transcription?: string;
+  user_id: string;
+}
 
 const Index = () => {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -19,6 +30,7 @@ const Index = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isRecordingComplete, setIsRecordingComplete] = useState(false);
+  const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
 
   useEffect(() => {
     // Check current session
@@ -41,6 +53,25 @@ const Index = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Fetch audio files on mount and after uploads
+  const fetchAudioFiles = async () => {
+    const { data, error } = await supabase
+      .from('audio_uploads')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching audio files:', error);
+      return;
+    }
+    
+    setAudioFiles(data);
+  };
+
+  useEffect(() => {
+    fetchAudioFiles();
+  }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -215,17 +246,28 @@ const Index = () => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      uploadAudio(file);
+  const resetRecordingState = () => {
+    setAudioChunks([]);
+    setIsRecordingComplete(false);
+    setIsRecording(false);
+    setIsPaused(false);
+  };
+
+  const handleUploadRecording = async () => {
+    if (audioChunks.length > 0) {
+      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+      await uploadAudio(audioBlob);
+      resetRecordingState();
+      await fetchAudioFiles(); // Refresh the list after upload
     }
   };
 
-  const handleUploadRecording = () => {
-    if (audioChunks.length > 0) {
-      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-      uploadAudio(audioBlob);
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      await uploadAudio(file);
+      event.target.value = ''; // Reset input
+      await fetchAudioFiles(); // Refresh the list after upload
     }
   };
 
@@ -242,7 +284,22 @@ const Index = () => {
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        {uploadProgress > 0 && (
+          <div className="mb-6 space-y-2">
+            <Progress 
+              value={uploadProgress} 
+              className="w-full h-2 transition-all duration-300"
+            />
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+              <p>
+                {uploadProgress === 100 ? 'Upload complete!' : `Uploading... ${uploadProgress}%`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
           <Card>
             <CardHeader>
               <CardTitle>Record Audio</CardTitle>
@@ -345,10 +402,7 @@ const Index = () => {
                     }`}
                   >
                     {isUploading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2" />
-                        <span className="text-sm">Uploading...</span>
-                      </>
+                      <Loader2 className="h-8 w-8 animate-spin" />
                     ) : (
                       <>
                         <Upload className="h-8 w-8 mb-2" />
@@ -359,20 +413,50 @@ const Index = () => {
                   </label>
                 </div>
               </div>
-              {uploadProgress > 0 && (
-                <div className="space-y-2">
-                  <Progress 
-                    value={uploadProgress} 
-                    className="w-full transition-all duration-300"
-                  />
-                  <p className="text-sm text-center text-muted-foreground">
-                    {uploadProgress === 100 ? 'Upload complete!' : `Uploading... ${uploadProgress}%`}
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Audio Files List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Uploads</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {audioFiles.length === 0 ? (
+              <p className="text-center text-muted-foreground">No audio files uploaded yet</p>
+            ) : (
+              <div className="space-y-4">
+                {audioFiles.map((file) => (
+                  <div 
+                    key={file.id} 
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">{file.filename}</span>
+                      <span className="text-sm text-muted-foreground">
+                        Uploaded {formatDistanceToNow(new Date(file.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {file.transcribed ? (
+                        <span className="text-sm text-green-500 flex items-center gap-1">
+                          <Check className="h-4 w-4" />
+                          Transcribed
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Processing
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
