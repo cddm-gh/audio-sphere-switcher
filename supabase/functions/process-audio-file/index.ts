@@ -20,7 +20,6 @@ Deno.serve(async (req) => {
 
     console.log(`Processing audio file in EdgeFunction: filename: ${filename}, storage_path: ${storage_path}`);
 
-    console.log('Creating supabase client');
     const supabaseClient = createSupabaseClient(authHeader);
 
     const audioFile = await getAudioFile(supabaseClient, storage_path);
@@ -96,22 +95,23 @@ async function getAudioFile(supabaseClient: SupabaseClient, storage_path: string
 }
 
 async function updateAudioWithReqId(supabaseClient: SupabaseClient, filename: string, reqId: string) {
-    const { data: updatedData, error: transcriptionError } = await supabaseClient
-      .from('audio_uploads')
-      .update({
-        deepgram_request_id: reqId,
-      })
-      .eq('filename', filename)
-      .select();
+  console.log(`Updating audio file ${filename} with reqId: ${reqId}`);
+  const { data: updatedData, error: transcriptionError } = await supabaseClient
+    .from('audio_uploads')
+    .update({
+      deepgram_request_id: reqId,
+    })
+    .eq('filename', filename)
+    .select();
 
-    if (transcriptionError) {
-      console.error(`Error saving transcription to supabase: ${JSON.stringify(transcriptionError)}`);
-      throw transcriptionError;
-    }
+  if (transcriptionError) {
+    console.error(`Error saving reqId to audio_uploads table for filename: ${filename}: ${JSON.stringify(transcriptionError)}`);
+    throw transcriptionError;
+  }
 
-    if (!updatedData || updatedData.length === 0) {
-      throw new Error(`No rows updated for filename: ${filename}`);
-    }
+  if (!updatedData || updatedData.length === 0) {
+    throw new Error(`No rows updated for filename: ${filename}`);
+  }
 
-    console.log(`Uploading audio file ${filename} with reqId: ${reqId} completed.`);
+  console.log(`Uploading audio file ${filename} with reqId: ${reqId} completed.`);
 }
