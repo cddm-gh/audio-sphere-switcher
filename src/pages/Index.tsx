@@ -41,6 +41,7 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioFileSize, setAudioFileSize] = useState<number>(0);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
+  const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -563,29 +564,55 @@ const Index = () => {
                               {formatDistanceToNow(new Date(file.created_at), { addSuffix: true })}
                             </div>
                           </div>
-                          {file.transcribed && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newExpandedFiles = new Set(expandedFiles);
-                                if (expandedFiles.has(file.id)) {
-                                  newExpandedFiles.delete(file.id);
-                                } else {
-                                  newExpandedFiles.add(file.id);
-                                }
-                                setExpandedFiles(newExpandedFiles);
-                              }}
-                              className="text-sm"
-                            >
-                              {expandedFiles.has(file.id) ? 'Hide Transcription' : 'Show Transcription'}
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {file.transcribed && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newExpandedFiles = new Set(expandedFiles);
+                                  if (expandedFiles.has(file.id)) {
+                                    newExpandedFiles.delete(file.id);
+                                  } else {
+                                    newExpandedFiles.add(file.id);
+                                  }
+                                  setExpandedFiles(newExpandedFiles);
+                                }}
+                                className="text-sm"
+                              >
+                                {expandedFiles.has(file.id) ? 'Hide Transcription' : 'Show Transcription'}
+                              </Button>
+                            )}
+                            {file.transcribed && file.summary && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newExpandedSummaries = new Set(expandedSummaries);
+                                  if (expandedSummaries.has(file.id)) {
+                                    newExpandedSummaries.delete(file.id);
+                                  } else {
+                                    newExpandedSummaries.add(file.id);
+                                  }
+                                  setExpandedSummaries(newExpandedSummaries);
+                                }}
+                                className="text-sm"
+                              >
+                                {expandedSummaries.has(file.id) ? 'Hide Summary' : 'Show Summary'}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         
                         {file.transcribed && expandedFiles.has(file.id) && (
                           <div className="mt-2 p-4 bg-muted rounded-md">
                             <p className="text-sm whitespace-pre-wrap">{file.transcription}</p>
+                          </div>
+                        )}
+
+                        {file.transcribed && file.summary && expandedSummaries.has(file.id) && (
+                          <div className="mt-2 p-4 bg-muted rounded-md">
+                            <p className="text-sm whitespace-pre-wrap">{file.summary}</p>
                           </div>
                         )}
                         
