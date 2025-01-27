@@ -25,7 +25,17 @@ export function Navbar({ theme, toggleTheme }: NavbarProps) {
   return (
     <div className="border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Audio Transcriber</h1>
+        <div className="flex items-center gap-2">
+          <img 
+            src="/logo.jpg" 
+            alt="Audio Transcriber Logo" 
+            className="h-8 w-8 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          <h1 className="text-xl font-bold">Audio Transcriber</h1>
+        </div>
         
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
