@@ -12,6 +12,9 @@ export type Database = {
       audio_uploads: {
         Row: {
           created_at: string
+          deepgram_request_id: string | null
+          duration: number | null
+          file_size: number | null
           filename: string
           id: string
           storage_path: string
@@ -22,6 +25,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deepgram_request_id?: string | null
+          duration?: number | null
+          file_size?: number | null
           filename: string
           id?: string
           storage_path: string
@@ -32,6 +38,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deepgram_request_id?: string | null
+          duration?: number | null
+          file_size?: number | null
           filename?: string
           id?: string
           storage_path?: string
