@@ -1,10 +1,5 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient as createDeepgramClient } from "@deepgram/sdk"
+import { createClient as createDeepgramClient, CallbackUrl } from "@deepgram/sdk"
 import { SupabaseClient } from "jsr:@supabase/supabase-js"
 import { corsHeaders } from "../_shared/cors.ts"
 import { createSupabaseClient } from "../_shared/supabaseClient.ts"
@@ -29,33 +24,13 @@ Deno.serve(async (req) => {
     const supabaseClient = createSupabaseClient(authHeader);
 
     const audioFile = await getAudioFile(supabaseClient, storage_path);
-    const fileTranscription = await transcribeFile(audioFile);
+    const fileTranscriptionReqId = await transcribeFile(audioFile);
+    // Save Deepgram request id to audio_uploads table to identify the transcription later
+    console.log(`${filename} sent to Deepgram for transcription. ReqId: ${fileTranscriptionReqId}`);
+    await updateAudioWithReqId(supabaseClient, filename, fileTranscriptionReqId);
 
-    // Save transcription to supabase
-    console.log(`Updating transcription for ${filename} with text: ${fileTranscription.substring(0, 100)}...`);
-    const { data: updatedData, error: transcriptionError } = await supabaseClient
-      .from('audio_uploads')
-      .update({
-        transcribed: true,
-        transcription: fileTranscription,
-      })
-      .eq('filename', filename)
-      .select();
-
-    if (transcriptionError) {
-      console.error(`Error saving transcription to supabase: ${JSON.stringify(transcriptionError)}`);
-      throw transcriptionError;
-    }
-
-    if (!updatedData || updatedData.length === 0) {
-      throw new Error(`No rows updated for filename: ${filename}`);
-    }
-
-    console.log(`Updated ${filename} with data: ${JSON.stringify(updatedData)}`);
-
-    console.log(`Processing file ${filename} completed.`);
     return new Response(
-      JSON.stringify({ message: 'Processing Completed' }),
+      JSON.stringify({ message: 'Upload Completed' }),
       { 
         headers: {
           ...corsHeaders,
@@ -87,8 +62,11 @@ async function transcribeFile(audioFile: Blob): Promise<string> {
   
   // Convert Blob to ArrayBuffer then to Buffer
   const buffer = Buffer.from(await audioFile.arrayBuffer());
-  
-  const { result: transcription } = await deepgramClient.listen.prerecorded.transcribeFile(buffer, {
+  const updateFuncBase = Deno.env.get('UPDATE_TRANSCRIPTION_FUNC_URL') ?? '';
+  const updateFuncURL = new CallbackUrl(updateFuncBase);
+
+  console.log(`Update Function URL: ${updateFuncURL}`);
+  const { result } = await deepgramClient.listen.prerecorded.transcribeFileCallback(buffer, updateFuncURL, {
     model: "nova-2",
     smart_format: true,
     dictation: true,
@@ -98,12 +76,13 @@ async function transcribeFile(audioFile: Blob): Promise<string> {
     detect_language: true,
   });
 
-  // Process and create formatted output
-  const paragraphs = transcription?.results?.channels?.[0]?.alternatives?.[0].paragraphs?.paragraphs;
-  const formattedText = paragraphs ?.map(p => `Speaker ${p.speaker}: ${p.sentences.map(s => s.text).join(' ')}`)
-            .join('\n\n') ?? '';
-  console.log(`Transcription: ${formattedText}`);
-  return formattedText;
+  if (!result) {
+    console.error('No transcription result');
+    throw new Error('No transcription result');
+  }
+
+  console.log(`Transcription result: ${result.request_id}`);
+  return result.request_id;
 }
 
 async function getAudioFile(supabaseClient: SupabaseClient, storage_path: string) {
@@ -114,4 +93,25 @@ async function getAudioFile(supabaseClient: SupabaseClient, storage_path: string
     throw error
   }
   return audioFile;
+}
+
+async function updateAudioWithReqId(supabaseClient: SupabaseClient, filename: string, reqId: string) {
+    const { data: updatedData, error: transcriptionError } = await supabaseClient
+      .from('audio_uploads')
+      .update({
+        deepgram_request_id: reqId,
+      })
+      .eq('filename', filename)
+      .select();
+
+    if (transcriptionError) {
+      console.error(`Error saving transcription to supabase: ${JSON.stringify(transcriptionError)}`);
+      throw transcriptionError;
+    }
+
+    if (!updatedData || updatedData.length === 0) {
+      throw new Error(`No rows updated for filename: ${filename}`);
+    }
+
+    console.log(`Uploading audio file ${filename} with reqId: ${reqId} completed.`);
 }
