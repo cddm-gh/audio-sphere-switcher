@@ -18,6 +18,8 @@ interface AudioFile {
   transcribed: boolean;
   transcription?: string;
   user_id: string;
+  duration: number;
+  file_size: number;
 }
 
 const Index = () => {
@@ -176,7 +178,7 @@ const Index = () => {
     };
   }, [audioUrl]);
 
-  const uploadAudio = async (file: File | Blob) => {
+  const uploadAudio = async (file: File | Blob, duration?: number) => {
     if (!session?.user?.id) {
       toast({
         title: "Error",
@@ -219,6 +221,8 @@ const Index = () => {
           user_id: session.user.id,
           filename: fileName,
           storage_path: storageData.path,
+          duration: duration || recordingDuration,
+          file_size: file.size
         });
 
       if (dbError) throw dbError;
@@ -306,21 +310,33 @@ const Index = () => {
       // Get audio duration
       const audio = new Audio();
       audio.src = URL.createObjectURL(file);
-      audio.addEventListener('loadedmetadata', () => {
-        setRecordingDuration(Math.floor(audio.duration));
+      
+      // Return a promise that resolves with the duration
+      const duration = await new Promise<number>((resolve) => {
+        audio.addEventListener('loadedmetadata', () => {
+          const seconds = Math.floor(audio.duration);
+          setRecordingDuration(seconds);
+          resolve(seconds);
+        });
       });
       
       setIsRecordingComplete(true);
+      return duration;
     }
+    return 0;
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      await handleFileChange(event);
-      await uploadAudio(file);
-      event.target.value = ''; // Reset input
-      await fetchAudioFiles(); // Refresh the list after upload
+      try {
+        const duration = await handleFileChange(event);
+        await uploadAudio(file, duration);
+        event.target.value = ''; // Reset input
+        await fetchAudioFiles(); // Refresh the list after upload
+      } catch (error) {
+        console.error('Error handling file upload:', error);
+      }
     }
   };
 
