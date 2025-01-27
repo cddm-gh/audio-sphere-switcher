@@ -20,9 +20,9 @@ Deno.serve(async (req) => {
   console.log(`Transcription result for ${metadata.request_id} - ${JSON.stringify(results)}`);
   const transcription = processTranscription(results);
   const supabaseClient = createSupabaseAdminClient();
-  await updateAudioTranscription(supabaseClient, body.filename, transcription);
+  await updateAudioTranscription(supabaseClient, metadata.request_id, transcription);
 
-  console.log(`Updated audio transcription for ${body.filename}`);
+  console.log(`Updated audio transcription for ${metadata.request_id}`);
   return new Response(
     JSON.stringify({ message: 'Success' }),
     { headers: { "Content-Type": "application/json" } },
@@ -35,7 +35,7 @@ function processTranscription(transcriptionResults: Results): string {
   const formattedText = paragraphs?.map((p: Paragraph) => `Speaker ${p.speaker}: ${p.sentences.map((s) => s.text).join(' ')}`)
             .join('\n\n') ?? '';
 
-  console.log(`Transcription: ${formattedText}`);
+  console.log(`Formatted Transcription: ${formattedText}`);
   return formattedText;
 }
 
