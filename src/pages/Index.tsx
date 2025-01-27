@@ -297,9 +297,27 @@ const Index = () => {
     }
   };
 
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAudioUrl(URL.createObjectURL(file));
+      setAudioFileSize(file.size);
+      
+      // Get audio duration
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(file);
+      audio.addEventListener('loadedmetadata', () => {
+        setRecordingDuration(Math.floor(audio.duration));
+      });
+      
+      setIsRecordingComplete(true);
+    }
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      await handleFileChange(event);
       await uploadAudio(file);
       event.target.value = ''; // Reset input
       await fetchAudioFiles(); // Refresh the list after upload
