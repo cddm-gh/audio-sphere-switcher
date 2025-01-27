@@ -5,8 +5,9 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient as createDeepgramClient } from "@deepgram/sdk"
-import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "jsr:@supabase/supabase-js"
 import { corsHeaders } from "../_shared/cors.ts"
+import { createSupabaseClient } from "../_shared/supabaseClient.ts"
 import { Buffer } from "node:buffer";
 
 Deno.serve(async (req) => {
@@ -25,17 +26,7 @@ Deno.serve(async (req) => {
     console.log(`Processing audio file in EdgeFunction: filename: ${filename}, storage_path: ${storage_path}`);
 
     console.log('Creating supabase client');
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      // Create client with Auth context of the user that called the function.
-      // This way your row-level-security (RLS) policies are applied.
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    );
+    const supabaseClient = createSupabaseClient(authHeader);
 
     const audioFile = await getAudioFile(supabaseClient, storage_path);
     const fileTranscription = await transcribeFile(audioFile);
