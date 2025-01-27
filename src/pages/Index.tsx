@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow, format } from "date-fns";
 import { Navbar } from "@/components/Navbar";
+import ReactMarkdown from 'react-markdown';
 import "@/styles/audio.css";
 
 interface AudioFile {
@@ -612,7 +613,9 @@ const Index = () => {
 
                         {file.transcribed && file.summary && expandedSummaries.has(file.id) && (
                           <div className="mt-2 p-4 bg-muted rounded-md">
-                            <p className="text-sm whitespace-pre-wrap">{file.summary}</p>
+                            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none">
+                              <ReactMarkdown>{file.summary}</ReactMarkdown>
+                            </div>
                           </div>
                         )}
                         
