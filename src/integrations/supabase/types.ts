@@ -15,6 +15,7 @@ export type Database = {
           filename: string
           id: string
           storage_path: string
+          summary: string | null
           transcribed: boolean
           transcription: string | null
           user_id: string
@@ -24,6 +25,7 @@ export type Database = {
           filename: string
           id?: string
           storage_path: string
+          summary?: string | null
           transcribed?: boolean
           transcription?: string | null
           user_id: string
@@ -33,6 +35,7 @@ export type Database = {
           filename?: string
           id?: string
           storage_path?: string
+          summary?: string | null
           transcribed?: boolean
           transcription?: string | null
           user_id?: string
