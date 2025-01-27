@@ -39,6 +39,7 @@ const Index = () => {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [audioFileSize, setAudioFileSize] = useState<number>(0);
+  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -551,30 +552,52 @@ const Index = () => {
             ) : (
               <div className="space-y-4">
                 {audioFiles.map((file) => (
-                  <div 
-                    key={file.id} 
-                    className="flex items-center justify-between p-4 rounded-lg border"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium">{file.filename}</span>
-                      <span className="text-sm text-muted-foreground">
-                        Uploaded {formatDistanceToNow(new Date(file.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {file.transcribed ? (
-                        <span className="text-sm text-green-500 flex items-center gap-1">
-                          <Check className="h-4 w-4" />
-                          Transcribed
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Processing
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <Card key={file.id} className="relative">
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium">{file.filename}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {formatDistanceToNow(new Date(file.created_at), { addSuffix: true })}
+                            </div>
+                          </div>
+                          {file.transcribed && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newExpandedFiles = new Set(expandedFiles);
+                                if (expandedFiles.has(file.id)) {
+                                  newExpandedFiles.delete(file.id);
+                                } else {
+                                  newExpandedFiles.add(file.id);
+                                }
+                                setExpandedFiles(newExpandedFiles);
+                              }}
+                              className="text-sm"
+                            >
+                              {expandedFiles.has(file.id) ? 'Hide Transcription' : 'Show Transcription'}
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {file.transcribed && expandedFiles.has(file.id) && (
+                          <div className="mt-2 p-4 bg-muted rounded-md">
+                            <p className="text-sm whitespace-pre-wrap">{file.transcription}</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{formatFileSize(file.file_size)}</span>
+                          <span>•</span>
+                          <span>{formatTime(file.duration)}</span>
+                          <span>•</span>
+                          <span>{file.transcribed ? 'Transcribed' : 'Processing...'}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
