@@ -20,6 +20,7 @@ interface AudioFile {
   user_id: string;
   duration: number;
   file_size: number;
+  summary?: string | null;
 }
 
 const Index = () => {
@@ -589,11 +590,29 @@ const Index = () => {
                         )}
                         
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{formatFileSize(file.file_size)}</span>
+                          <span>Size: {formatFileSize(file.file_size)}</span>
                           <span>•</span>
-                          <span>{formatTime(file.duration)}</span>
+                          <span>Duration: {formatTime(file.duration)}</span>
                           <span>•</span>
-                          <span>{file.transcribed ? 'Transcribed' : 'Processing...'}</span>
+                          {file.transcribed ? (
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/10 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10">
+                                Transcribed
+                              </span>
+                              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                                file.summary 
+                                  ? "bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 ring-green-700/10" 
+                                  : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 ring-red-700/10"
+                              }`}>
+                                Summarized
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Processing...
+                            </span>
+                          )}
                         </div>
                       </div>
                     </CardContent>
