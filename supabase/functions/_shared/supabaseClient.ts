@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js";
 
 export function createSupabaseClient(token?: string): SupabaseClient {
     const opts = token
-        ? { global: { headers: { Authorization: `Bearer ${token}` } } }
+        ? { global: { headers: { Authorization: `${token}` } } }
         : undefined;
 
     const supabaseClient = createClient(
