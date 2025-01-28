@@ -49,6 +49,10 @@ const Index = () => {
   const [audioFileSize, setAudioFileSize] = useState<number>(0);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const PAGE_SIZE = 5;
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -74,18 +78,30 @@ const Index = () => {
   }, [navigate]);
 
   // Fetch audio files on mount and after uploads
-  const fetchAudioFiles = async () => {
-    const { data, error } = await supabase
-      .from('audio_uploads')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching audio files:', error);
-      return;
+  const fetchAudioFiles = async (loadMore = false) => {
+    try {
+      const currentPage = loadMore ? page + 1 : 0;
+      setIsLoadingMore(loadMore);
+
+      const { data, error, count } = await supabase
+        .from('audio_uploads')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
+      
+      if (error) {
+        console.error('Error fetching audio files:', error);
+        return;
+      }
+
+      if (data) {
+        setAudioFiles(prev => loadMore ? [...prev, ...data] : data);
+        setHasMore(count !== null && (currentPage + 1) * PAGE_SIZE < count);
+        setPage(currentPage);
+      }
+    } finally {
+      setIsLoadingMore(false);
     }
-    
-    setAudioFiles(data);
   };
 
   useEffect(() => {
@@ -428,6 +444,12 @@ const Index = () => {
     }
   };
 
+  const loadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      fetchAudioFiles(true);
+    }
+  };
+
   if (!session) {
     return null; // Don't render anything while checking auth
   }
@@ -727,6 +749,26 @@ const Index = () => {
                     </CardContent>
                   </Card>
                 ))}
+                
+                {hasMore && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={loadMore}
+                      disabled={isLoadingMore}
+                      className="gap-2"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Load More'
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
