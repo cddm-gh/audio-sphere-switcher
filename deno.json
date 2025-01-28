@@ -1,0 +1,21 @@
+{
+    "tasks": {
+        "dev": "vite"
+    },
+    "nodeModulesDir": "auto",
+    "exclude": ["src/", "public/", "node_modules/"],
+    "lint": {
+        "include": ["supabase/"],
+        "exclude": ["node_modules/", "public/", "src/", "dist/"]
+    },
+    "compilerOptions": {
+      "noImplicitAny": false,
+      "noUnusedParameters": false,
+      "allowJs": true,
+      "noUnusedLocals": false,
+      "strictNullChecks": false
+    },
+    "unstable": [
+      "sloppy-imports"
+    ]
+}
