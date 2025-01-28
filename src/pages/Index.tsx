@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Navbar } from "@/components/Navbar";
 import ReactMarkdown from 'react-markdown';
 import { AudioRecorder } from "@/components/AudioRecorder";
+import { AudioPreview } from "@/components/AudioPreview";
 import { formatTime, formatFileSize } from "@/lib/format";
 import "@/styles/audio.css";
 
@@ -41,6 +42,9 @@ const Index = () => {
   const navigate = useNavigate();
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioFileSize, setAudioFileSize] = useState<number>(0);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
+  const [currentAudioBlob, setCurrentAudioBlob] = useState<Blob | null>(null);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
@@ -279,11 +283,19 @@ const Index = () => {
     }
   };
 
+  const handleRecordingComplete = (url: string, blob: Blob, duration: number) => {
+    setAudioUrl(url);
+    setAudioFileSize(blob.size);
+    setAudioDuration(duration);
+    setCurrentAudioBlob(blob);
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setAudioUrl(URL.createObjectURL(file));
       setAudioFileSize(file.size);
+      setCurrentAudioBlob(file);
       
       // Get audio duration
       const audio = new Audio();
@@ -293,6 +305,7 @@ const Index = () => {
       const duration = await new Promise<number>((resolve) => {
         audio.addEventListener('loadedmetadata', () => {
           const seconds = Math.floor(audio.duration);
+          setAudioDuration(seconds);
           resolve(seconds);
         });
       });
@@ -302,19 +315,30 @@ const Index = () => {
     return 0;
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      try {
-        const duration = await handleFileChange(event);
-        await uploadAudio(file, duration);
-        event.target.value = ''; // Reset input
-        await fetchAudioFiles(); // Refresh the list after upload
-      } catch (error) {
-        console.error('Error handling file upload:', error);
-      }
+  const handleUploadRecording = async () => {
+    if (currentAudioBlob) {
+      await uploadAudio(currentAudioBlob, audioDuration);
+      handleReset();
     }
   };
+
+  const handleReset = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioUrl(null);
+    setAudioFileSize(0);
+    setAudioDuration(0);
+    setCurrentAudioBlob(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
 
   const loadMore = () => {
     if (!isLoadingMore && hasMore) {
@@ -343,68 +367,29 @@ const Index = () => {
               {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
               <p>
                 {uploadProgress === 100 
-                  ? 'Upload complete!' 
+                  ? 'Upload complete!'
                   : `Uploading... ${uploadProgress}%`}
               </p>
             </div>
           </div>
         )}
 
-        {/* Add Audio Preview */}
         {audioUrl && (
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <span>Size: {formatFileSize(audioFileSize)}</span>
-                    <span>•</span>
-                    <span>Duration: {formatTime(0)}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <audio 
-                      src={audioUrl} 
-                      controls 
-                      className="w-full custom-audio"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setAudioUrl(null)}
-                      title="Start Over"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      onClick={handleFileUpload}
-                      disabled={isUploading}
-                      className="gap-2"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4" />
-                          Upload
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <AudioPreview
+            audioUrl={audioUrl}
+            fileSize={audioFileSize}
+            duration={audioDuration}
+            onUpload={handleUploadRecording}
+            onReset={handleReset}
+            isUploading={isUploading}
+          />
         )}
 
         <div className="grid gap-6 md:grid-cols-2 mb-8">
-          <AudioRecorder onUpload={uploadAudio} isUploading={isUploading} />
+          <AudioRecorder 
+            onRecordingComplete={handleRecordingComplete}
+            isUploading={isUploading}
+          />
           <Card>
             <CardHeader>
               <CardTitle>Upload Audio File</CardTitle>
@@ -415,7 +400,7 @@ const Index = () => {
                   <input
                     type="file"
                     accept="audio/*"
-                    onChange={handleFileUpload}
+                    onChange={handleFileChange}
                     className="hidden"
                     id="audio-upload"
                     disabled={isUploading}
@@ -578,20 +563,5 @@ const Index = () => {
     </div>
   );
 };
-
-// const formatTime = (seconds: number) => {
-//   const hours = Math.floor(seconds / 3600);
-//   const minutes = Math.floor((seconds % 3600) / 60);
-//   const secondsRemaining = seconds % 60;
-//   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secondsRemaining.toString().padStart(2, '0')}`;
-// }
-
-// const formatFileSize = (bytes: number) => {
-//   if (bytes === 0) return '0 Bytes';
-//   const k = 1024;
-//   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-//   const i = Math.floor(Math.log(bytes) / Math.log(k));
-//   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-// }
 
 export default Index;
