@@ -84,6 +84,26 @@ const Index = () => {
 
   useEffect(() => {
     fetchAudioFiles();
+
+    // Subscribe to changes in the audio_uploads table
+    const channel = supabase
+      .channel('audio_uploads_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'audio_uploads'
+        },
+        () => {
+          fetchAudioFiles();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -231,6 +251,9 @@ const Index = () => {
 
       if (dbError) throw dbError;
 
+      // Fetch the updated list of audio files
+      await fetchAudioFiles();
+
       // Set progress to 100% with a smooth transition
       setUploadProgress(100);
       
@@ -251,6 +274,12 @@ const Index = () => {
         throw new Error("No access token available");
       }
 
+      // Show processing toast immediately
+      setIsProcessing(true);
+      toast({
+        title: "Processing",
+        description: "Your audio file is being processed",
+      });
       // Call the edge function to process the audio file
       const functionUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
       const response = await fetch(
@@ -271,12 +300,6 @@ const Index = () => {
       if (!response.ok) {
         throw new Error("Failed to process audio file");
       }
-
-      setIsProcessing(true);
-      toast({
-        title: "Processing",
-        description: "Your audio file is being processed",
-      });
     } catch (error: any) {
       console.error("Upload error:", error);
       toast({
