@@ -12,21 +12,10 @@ import ReactMarkdown from 'react-markdown';
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { AudioPreview } from "@/components/AudioPreview";
 import { AudioFileUpload } from "@/components/AudioFileUpload";
+import { AudioFilesList } from "@/components/AudioFilesList";
 import { formatTime, formatFileSize } from "@/lib/format";
+import { AudioFile } from "@/types/audio";
 import "@/styles/audio.css";
-
-interface AudioFile {
-  id: string;
-  filename: string;
-  storage_path: string;
-  created_at: string;
-  transcribed: boolean;
-  transcription?: string;
-  user_id: string;
-  duration: number;
-  file_size: number;
-  summary?: string | null;
-}
 
 const Index = () => {
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -397,136 +386,12 @@ const Index = () => {
           />
         </div>
 
-        {/* Audio Files List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Uploads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {audioFiles.length === 0 ? (
-              <p className="text-center text-muted-foreground">No audio files uploaded yet</p>
-            ) : (
-              <div className="space-y-4">
-                {audioFiles.map((file) => (
-                  <Card key={file.id} className="relative">
-                    <CardContent className="pt-6">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium">{file.filename}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatDistanceToNow(new Date(file.created_at), { addSuffix: true })}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {file.transcribed && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const newExpandedFiles = new Set(expandedFiles);
-                                  if (expandedFiles.has(file.id)) {
-                                    newExpandedFiles.delete(file.id);
-                                  } else {
-                                    newExpandedFiles.add(file.id);
-                                  }
-                                  setExpandedFiles(newExpandedFiles);
-                                }}
-                                className="text-sm"
-                              >
-                                {expandedFiles.has(file.id) ? 'Hide Transcription' : 'Show Transcription'}
-                              </Button>
-                            )}
-                            {file.transcribed && file.summary && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const newExpandedSummaries = new Set(expandedSummaries);
-                                  if (expandedSummaries.has(file.id)) {
-                                    newExpandedSummaries.delete(file.id);
-                                  } else {
-                                    newExpandedSummaries.add(file.id);
-                                  }
-                                  setExpandedSummaries(newExpandedSummaries);
-                                }}
-                                className="text-sm"
-                              >
-                                {expandedSummaries.has(file.id) ? 'Hide Summary' : 'Show Summary'}
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {file.transcribed && expandedFiles.has(file.id) && (
-                          <div className="mt-2 p-4 bg-muted rounded-md">
-                            <p className="text-sm whitespace-pre-wrap">{file.transcription}</p>
-                          </div>
-                        )}
-
-                        {file.transcribed && file.summary && expandedSummaries.has(file.id) && (
-                          <div className="mt-2 p-4 bg-muted rounded-md">
-                            <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none">
-                              <ReactMarkdown>{file.summary}</ReactMarkdown>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Size: {formatFileSize(file.file_size)}</span>
-                          <span>•</span>
-                          <span>Duration: {formatTime(file.duration)}</span>
-                          <span>•</span>
-                          {file.transcribed ? (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/10 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10">
-                                Transcribed
-                              </span>
-                              <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                                file.summary 
-                                  ? "bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 ring-green-700/10" 
-                                  : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 ring-red-700/10"
-                              }`}>
-                                {file.summary ? "Summarized" : "Summary Pending"}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10">
-                                Processing
-                              </span>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {hasMore && (
-                  <div className="flex justify-center pt-4">
-                    <Button
-                      variant="outline"
-                      onClick={loadMore}
-                      disabled={isLoadingMore}
-                      className="gap-2"
-                    >
-                      {isLoadingMore ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        'Load More'
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <AudioFilesList
+          files={audioFiles}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMore}
+        />
       </div>
     </div>
   );
