@@ -2,13 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Mic, Upload, Pause, Square, Loader2, Play, Check, Trash2 } from "lucide-react";
+import { Upload, Loader2, Play, Check, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { Navbar } from "@/components/Navbar";
 import ReactMarkdown from 'react-markdown';
+import { AudioRecorder } from "@/components/AudioRecorder";
+import { formatTime, formatFileSize } from "@/lib/format";
 import "@/styles/audio.css";
 
 interface AudioFile {
@@ -32,28 +34,19 @@ const Index = () => {
     }
     return 'light';
   });
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isUploading, setIsUploading] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isRecordingComplete, setIsRecordingComplete] = useState(false);
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [audioFileSize, setAudioFileSize] = useState<number>(0);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
   const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const PAGE_SIZE = 5;
-  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Check current session
@@ -122,8 +115,7 @@ const Index = () => {
           const updatedRecord = payload.new as AudioFile;
           
           // If this is the file we're processing and it's now transcribed
-          if (isProcessing && updatedRecord.transcribed) {
-            setIsProcessing(false);
+          if (updatedRecord.transcribed) {
             toast({
               title: "Complete",
               description: "Your audio file has been transcribed",
@@ -178,96 +170,6 @@ const Index = () => {
     document.documentElement.classList.toggle("dark");
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: Blob[] = [];
-
-      recorder.ondataavailable = (e) => {
-        chunks.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioChunks(chunks);
-        setIsRecordingComplete(true);
-        setAudioUrl(URL.createObjectURL(blob));
-        setAudioFileSize(blob.size);
-      };
-
-      setMediaRecorder(recorder);
-      recorder.start();
-      setIsRecording(true);
-      setIsPaused(false);
-      setIsRecordingComplete(false);
-      setRecordingDuration(0);
-      
-      // Start the timer
-      timerRef.current = window.setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-
-      toast({
-        title: "Recording started",
-        description: "Speak into your microphone",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start recording",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const pauseRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.pause();
-      setIsPaused(true);
-      // Pause the timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  };
-
-  const resumeRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.resume();
-      setIsPaused(false);
-      // Resume the timer
-      if (!timerRef.current) {
-        timerRef.current = window.setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
-      }
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach((track) => track.stop());
-      setIsRecording(false);
-      setIsPaused(false);
-      // Stop the timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-    };
-  }, [audioUrl]);
-
   const uploadAudio = async (file: File | Blob, duration?: number) => {
     if (!session?.user?.id) {
       toast({
@@ -311,7 +213,7 @@ const Index = () => {
           user_id: session.user.id,
           filename: fileName,
           storage_path: storageData.path,
-          duration: duration || recordingDuration,
+          duration: duration || 0,
           file_size: file.size
         });
 
@@ -341,7 +243,6 @@ const Index = () => {
       }
 
       // Show processing toast immediately
-      setIsProcessing(true);
       toast({
         title: "Processing",
         description: "Your audio file is being processed",
@@ -378,22 +279,6 @@ const Index = () => {
     }
   };
 
-  const resetRecordingState = () => {
-    setAudioChunks([]);
-    setIsRecordingComplete(false);
-    setIsRecording(false);
-    setIsPaused(false);
-  };
-
-  const handleUploadRecording = async () => {
-    if (audioChunks.length > 0) {
-      const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-      await uploadAudio(audioBlob);
-      resetRecordingState();
-      await fetchAudioFiles(); // Refresh the list after upload
-    }
-  };
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -408,12 +293,10 @@ const Index = () => {
       const duration = await new Promise<number>((resolve) => {
         audio.addEventListener('loadedmetadata', () => {
           const seconds = Math.floor(audio.duration);
-          setRecordingDuration(seconds);
           resolve(seconds);
         });
       });
       
-      setIsRecordingComplete(true);
       return duration;
     }
     return 0;
@@ -433,17 +316,6 @@ const Index = () => {
     }
   };
 
-  const handleStartOver = () => {
-    setAudioUrl(null);
-    setAudioChunks([]);
-    setIsRecordingComplete(false);
-    setRecordingDuration(0);
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
   const loadMore = () => {
     if (!isLoadingMore && hasMore) {
       fetchAudioFiles(true);
@@ -459,19 +331,19 @@ const Index = () => {
       <Navbar theme={theme} toggleTheme={toggleTheme} />
       
       <div className="container mx-auto px-4 py-8">
-        {(uploadProgress > 0 || isProcessing) && (!audioFiles[0]?.transcribed) && (
+        {(uploadProgress > 0) && (
           <div className="mb-6 space-y-2">
             <Progress 
               value={uploadProgress} 
               className={`w-full h-2 transition-all duration-300 ${
-                uploadProgress === 100 && isProcessing ? 'animate-pulse' : ''
+                uploadProgress === 100 ? 'animate-pulse' : ''
               }`}
             />
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
               <p>
                 {uploadProgress === 100 
-                  ? (isProcessing ? 'Processing audio...' : 'Upload complete!') 
+                  ? 'Upload complete!' 
                   : `Uploading... ${uploadProgress}%`}
               </p>
             </div>
@@ -487,7 +359,7 @@ const Index = () => {
                   <div className="flex items-center gap-2">
                     <span>Size: {formatFileSize(audioFileSize)}</span>
                     <span>•</span>
-                    <span>Duration: {formatTime(recordingDuration)}</span>
+                    <span>Duration: {formatTime(0)}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -502,13 +374,13 @@ const Index = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={handleStartOver}
+                      onClick={() => setAudioUrl(null)}
                       title="Start Over"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                     <Button
-                      onClick={handleUploadRecording}
+                      onClick={handleFileUpload}
                       disabled={isUploading}
                       className="gap-2"
                     >
@@ -532,74 +404,7 @@ const Index = () => {
         )}
 
         <div className="grid gap-6 md:grid-cols-2 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Record Audio</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col items-center gap-4">
-                {!isRecording ? (
-                  <Button 
-                    size="lg" 
-                    className="w-16 h-16 rounded-full"
-                    onClick={startRecording}
-                  >
-                    <Mic className="h-6 w-6" />
-                  </Button>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="text-sm font-medium mb-2">
-                      {formatTime(recordingDuration)}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="w-12 h-12 rounded-full"
-                        onClick={isPaused ? resumeRecording : pauseRecording}
-                      >
-                        {isPaused ? (
-                          <Play className="h-6 w-6" />
-                        ) : (
-                          <Pause className="h-6 w-6" />
-                        )}
-                      </Button>
-                      
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="w-12 h-12 rounded-full relative"
-                        onClick={stopRecording}
-                      >
-                        <Square className="h-6 w-6" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {isRecordingComplete && (
-                  <Button 
-                    variant="secondary" 
-                    onClick={handleUploadRecording}
-                    className="gap-2"
-                    disabled={isUploading}
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        Upload Recording
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
+          <AudioRecorder onUpload={uploadAudio} isUploading={isUploading} />
           <Card>
             <CardHeader>
               <CardTitle>Upload Audio File</CardTitle>
@@ -734,14 +539,10 @@ const Index = () => {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              {isProcessing && !file.transcribed && (
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10">
-                                    Processing
-                                  </span>
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                </div>
-                              )}
+                              <span className="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10">
+                                Processing
+                              </span>
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             </div>
                           )}
                         </div>
@@ -778,19 +579,19 @@ const Index = () => {
   );
 };
 
-const formatTime = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secondsRemaining = seconds % 60;
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secondsRemaining.toString().padStart(2, '0')}`;
-}
+// const formatTime = (seconds: number) => {
+//   const hours = Math.floor(seconds / 3600);
+//   const minutes = Math.floor((seconds % 3600) / 60);
+//   const secondsRemaining = seconds % 60;
+//   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secondsRemaining.toString().padStart(2, '0')}`;
+// }
 
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+// const formatFileSize = (bytes: number) => {
+//   if (bytes === 0) return '0 Bytes';
+//   const k = 1024;
+//   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+//   const i = Math.floor(Math.log(bytes) / Math.log(k));
+//   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+// }
 
 export default Index;
