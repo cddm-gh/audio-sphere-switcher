@@ -414,7 +414,7 @@ const Index = () => {
       <Navbar theme={theme} toggleTheme={toggleTheme} />
       
       <div className="container mx-auto px-4 py-8">
-        {uploadProgress > 0 && (
+        {(uploadProgress > 0 || isProcessing) && (!audioFiles[0]?.transcribed) && (
           <div className="mb-6 space-y-2">
             <Progress 
               value={uploadProgress} 
