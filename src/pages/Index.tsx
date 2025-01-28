@@ -694,7 +694,7 @@ const Index = () => {
                                   <span className="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10">
                                     Processing
                                   </span>
-                                  <Progress value={100} className="w-24 animate-pulse" />
+                                  <Loader2 className="h-4 w-4 animate-spin" />
                                 </div>
                               )}
                             </div>
