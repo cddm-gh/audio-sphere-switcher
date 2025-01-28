@@ -91,17 +91,44 @@ const Index = () => {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'audio_uploads'
         },
-        () => {
+        (payload) => {
+          console.log('Received update:', payload);
+          const updatedRecord = payload.new as AudioFile;
+          
+          // If this is the file we're processing and it's now transcribed
+          if (isProcessing && updatedRecord.transcribed) {
+            setIsProcessing(false);
+            toast({
+              title: "Complete",
+              description: "Your audio file has been transcribed",
+            });
+          }
+          
           fetchAudioFiles();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'audio_uploads'
+        },
+        (payload) => {
+          console.log('Received insert:', payload);
+          fetchAudioFiles();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
+      console.log('Unsubscribing from channel');
       channel.unsubscribe();
     };
   }, []);
@@ -657,14 +684,20 @@ const Index = () => {
                                   ? "bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 ring-green-700/10" 
                                   : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 ring-red-700/10"
                               }`}>
-                                Summarized
+                                {file.summary ? "Summarized" : "Summary Pending"}
                               </span>
                             </div>
                           ) : (
-                            <span className="flex items-center gap-1">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              Processing...
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {isProcessing && !file.transcribed && (
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10">
+                                    Processing
+                                  </span>
+                                  <Progress value={100} className="w-24 animate-pulse" />
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
