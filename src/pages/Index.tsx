@@ -1,19 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Loader2, Play, Check, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
 import { Navbar } from "@/components/Navbar";
-import ReactMarkdown from 'react-markdown';
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { AudioPreview } from "@/components/AudioPreview";
 import { AudioFileUpload } from "@/components/AudioFileUpload";
 import { AudioFilesList } from "@/components/AudioFilesList";
-import { formatTime, formatFileSize } from "@/lib/format";
 import { AudioFile } from "@/types/audio";
 import "@/styles/audio.css";
 
@@ -35,8 +30,6 @@ const Index = () => {
   const [audioFileSize, setAudioFileSize] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [currentAudioBlob, setCurrentAudioBlob] = useState<Blob | null>(null);
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
-  const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
