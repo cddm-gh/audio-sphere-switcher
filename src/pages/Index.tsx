@@ -386,7 +386,7 @@ const Index = () => {
             isUploading={isUploading}
           />
           <AudioFileUpload
-            onFileSelect={handleFileChange}
+            onFileSelect={async (e) => { await handleFileChange(e); }}
             isUploading={isUploading}
           />
         </div>
