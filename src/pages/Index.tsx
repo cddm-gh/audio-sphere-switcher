@@ -163,7 +163,8 @@ const Index = () => {
   };
 
   const uploadAudio = async (file: File | Blob, duration?: number) => {
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
       toast({
         title: "Error",
         description: "You must be logged in to upload audio",
@@ -175,7 +176,7 @@ const Index = () => {
     try {
       setIsUploading(true);
       setUploadProgress(0);
-      const fileName = `audio-${Date.now()}.webm`;
+      const fileName = `audio-${userId}-${Date.now()}.webm`;
       
       // Simulate progress updates for better UX
       const progressInterval = setInterval(() => {
