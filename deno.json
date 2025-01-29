@@ -3,7 +3,7 @@
         "dev": "vite"
     },
     "nodeModulesDir": "auto",
-    "exclude": ["src/", "public/", "node_modules/"],
+    "exclude": ["src/", "public/", "node_modules/", "vite.config.ts"],
     "lint": {
         "include": ["supabase/"],
         "exclude": ["node_modules/", "public/", "src/", "dist/"]
