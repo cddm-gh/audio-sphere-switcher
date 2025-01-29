@@ -128,7 +128,12 @@ const Index = () => {
         },
         (payload) => {
           console.log('Received insert:', payload);
-          fetchAudioFiles();
+          const newRecord = payload.new as AudioFile;
+
+          if (newRecord) {
+            setIsUploading(false);
+            setAudioFiles(prev => loadMore ? [...prev, newRecord] : [newRecord]);
+          }
         }
       )
       .subscribe((status) => {
