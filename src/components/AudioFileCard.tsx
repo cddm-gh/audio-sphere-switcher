@@ -34,20 +34,20 @@ export const AudioFileCard = ({
     <Card key={id} className="relative">
       <CardContent className="pt-6">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="font-medium">{filename}</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="font-medium truncate">{filename}</div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">
                 {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {transcribed && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowTranscription(!showTranscription)}
-                  className="text-sm"
+                  className="text-sm whitespace-nowrap"
                 >
                   {showTranscription ? 'Hide Transcription' : 'Show Transcription'}
                 </Button>
@@ -57,7 +57,7 @@ export const AudioFileCard = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowSummary(!showSummary)}
-                  className="text-sm"
+                  className="text-sm whitespace-nowrap"
                 >
                   {showSummary ? 'Hide Summary' : 'Show Summary'}
                 </Button>
@@ -79,17 +79,19 @@ export const AudioFileCard = ({
             </div>
           )}
           
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Size: {formatFileSize(fileSize)}</span>
-            <span>•</span>
-            <span>Duration: {formatTime(duration)}</span>
-            <span>•</span>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span className="whitespace-nowrap">Size: {formatFileSize(fileSize)}</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="whitespace-nowrap">Duration: {formatTime(duration)}</span>
+              <span className="hidden sm:inline">•</span>
+            </div>
             {transcribed ? (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/10 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/10 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10 whitespace-nowrap">
                   Transcribed
                 </span>
-                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${
                   summary 
                     ? "bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 ring-green-700/10" 
                     : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 ring-red-700/10"
