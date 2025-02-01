@@ -97,19 +97,43 @@ const Index = () => {
           schema: 'public',
           table: 'audio_uploads'
         },
-        (payload) => {
+        async (payload) => {
           console.log('Received update:', payload);
           const updatedRecord = payload.new as AudioFile;
           
+          // Update the audio files state immediately
+          setAudioFiles(prev => 
+            prev.map(file => 
+              file.id === updatedRecord.id ? updatedRecord : file
+            )
+          );
+          
           // If this is the file we're processing and it's now transcribed
-          if (updatedRecord.transcribed) {
+          if (updatedRecord.transcribed && !updatedRecord.summary) {
             toast({
               title: "Complete",
               description: "Your audio file has been transcribed",
             });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              console.error('No session found');
+              return;
+            }
+
+            console.log('Calling create_transcription_summary');
+            await fetch('https://croosqxagovnhdhktxkr.supabase.co/functions/v1/create_transcription_summary', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                id: updatedRecord.id,
+                transcription: updatedRecord.transcription,
+                summary: updatedRecord.summary
+              }),
+            });
           }
-          
-          fetchAudioFiles();
         }
       )
       .on(
