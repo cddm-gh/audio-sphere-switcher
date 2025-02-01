@@ -111,8 +111,9 @@ const Index = () => {
           // If this is the file we're processing and it's now transcribed
           if (updatedRecord.transcribed && !updatedRecord.summary) {
             toast({
-              title: "Complete",
-              description: "Your audio file has been transcribed",
+              title: "Transcription Completed",
+              description: "Your audio file has been transcribedand is being summarized now",
+              duration: 2000,
             });
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.access_token) {
@@ -120,11 +121,6 @@ const Index = () => {
               return;
             }
 
-            console.log('Calling create_transcription_summary');
-            toast({
-              title: "Sending transcription",
-              description: "Your transcription is being processed",
-            });
             const supaFunUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
             await fetch(`${supaFunUrl}/v1/create_transcription_summary`, {
               method: 'POST',
@@ -197,6 +193,7 @@ const Index = () => {
         title: "Error",
         description: "You must be logged in to upload audio",
         variant: "destructive",
+        duration: 1500,
       });
       return;
     }
@@ -253,6 +250,7 @@ const Index = () => {
       toast({
         title: "Success",
         description: "Audio uploaded successfully",
+        duration: 1500,
       });
 
       // Get the access token from the session
@@ -267,6 +265,7 @@ const Index = () => {
       toast({
         title: "Processing",
         description: "Your audio file is being processed",
+        duration: 1500,
       });
       // Call the edge function to process the audio file
       const functionUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
@@ -294,6 +293,7 @@ const Index = () => {
         title: "Error",
         description: error.message || "Failed to upload audio",
         variant: "destructive",
+        duration: 1500,
       });
       setIsUploading(false);
       setUploadProgress(0);
