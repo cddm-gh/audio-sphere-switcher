@@ -121,7 +121,12 @@ const Index = () => {
             }
 
             console.log('Calling create_transcription_summary');
-            await fetch('https://croosqxagovnhdhktxkr.supabase.co/functions/v1/create_transcription_summary', {
+            toast({
+              title: "Sending transcription",
+              description: "Your transcription is being processed",
+            });
+            const supaFunUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+            await fetch(`${supaFunUrl}/v1/create_transcription_summary`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,
@@ -129,8 +134,7 @@ const Index = () => {
               },
               body: JSON.stringify({
                 id: updatedRecord.id,
-                transcription: updatedRecord.transcription,
-                summary: updatedRecord.summary
+                transcription: updatedRecord.transcription
               }),
             });
           }
