@@ -53,7 +53,8 @@ Deno.serve(async (req) => {
 
   console.log('OpenAI response:', JSON.stringify(response));
   const result = await response.json();
-  const generatedSummary = result.choices[0].message.content.trim();
+  const summaryFromApi = result.choices[0].message.content.trim();
+  const generatedSummary = summaryFromApi.replace(/\\n/g, '\n');
 
   const supabaseClient = createSupabaseAdminClient();
   await updateAudioSummary(supabaseClient, id, generatedSummary);
@@ -65,6 +66,7 @@ Deno.serve(async (req) => {
 });
 
 async function updateAudioSummary(supabaseClient: SupabaseClient, id: string, summary: string) {
+  console.log(`Updating audio summary for ${id} with summary: ${summary}`);
   const { error } = await supabaseClient
     .from('audio_uploads')
     .update({ summary: summary })
