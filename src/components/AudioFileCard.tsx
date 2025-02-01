@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { formatTime, formatFileSize } from "@/lib/format";
 
 interface AudioFileCardProps {
@@ -74,7 +75,7 @@ export const AudioFileCard = ({
           {transcribed && summary && showSummary && (
             <div className="mt-2 p-4 bg-muted rounded-md">
               <div className="prose prose-sm dark:prose-invert prose-p:my-2 prose-headings:my-3 max-w-none">
-                <ReactMarkdown>{summary}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
               </div>
             </div>
           )}
