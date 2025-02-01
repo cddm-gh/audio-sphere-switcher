@@ -91,13 +91,16 @@ export const AudioFileCard = ({
                 <span className="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-900/10 px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-inset ring-blue-700/10 whitespace-nowrap">
                   Transcribed
                 </span>
-                <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${
-                  summary 
-                    ? "bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-400 ring-green-700/10" 
-                    : "bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400 ring-red-700/10"
-                }`}>
-                  {summary ? "Summarized" : "Summary Pending"}
-                </span>
+                {summary ? (
+                  <span className="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/10 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400 ring-1 ring-inset ring-green-700/10 whitespace-nowrap">
+                    Summarized
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10 whitespace-nowrap">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Summarizing
+                  </span>
+                )}
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
