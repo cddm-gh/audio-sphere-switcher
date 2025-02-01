@@ -8,14 +8,7 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
   console.log('EF create_transcript_summary ', JSON.stringify(req.body));
-  const { id, transcription, summary } = await req.json();
-
-  if (summary) {
-    return new Response(
-      JSON.stringify({ ok: true }),
-      { headers: { "Content-Type": "application/json" } },
-    );
-  }
+  const { id, transcription } = await req.json();
 
   if (!transcription) {
     console.error('No transcription provided');
@@ -29,6 +22,7 @@ Deno.serve(async (req) => {
     console.error('OpenAI API key not found');
     throw new Error('OpenAI API key not found');
   }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -40,7 +34,7 @@ Deno.serve(async (req) => {
       messages: [
         {
           role: 'system',
-          content: 'Create a concise summary of this audio transcription, focusing on the main points. There could be multiple spikers identified by "Speaker #". Don`t make a summary with just bullet points.'
+          content: 'Create a concise summary of this audio transcription, focusing on the main topics and sub topics. There could be multiple spikers identified by "Speaker #". Don`t make a summary with just bullet points. The final format should be in markdown'
         },
         {
           role: 'user',
@@ -64,7 +58,6 @@ Deno.serve(async (req) => {
   const supabaseClient = createSupabaseAdminClient();
   await updateAudioSummary(supabaseClient, id, generatedSummary);
 
-  console.log(`Summary updated for audio ${id}`);
   return new Response(
     JSON.stringify({ generatedSummary }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -79,7 +72,9 @@ async function updateAudioSummary(supabaseClient: SupabaseClient, id: string, su
     .select();
 
   if (error) {
-    console.error(`Error updating audio summary for ${id}: ${error}`);
+    console.error(`Error updating audio summary for ${id}: ${JSON.stringify(error)}`);
     throw error
   }
+
+  console.log(`Summary created for audio ${id}`);
 }
