@@ -1,19 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Loader2, Play, Check, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { formatDistanceToNow } from "date-fns";
 import { Navbar } from "@/components/Navbar";
-import ReactMarkdown from 'react-markdown';
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { AudioPreview } from "@/components/AudioPreview";
 import { AudioFileUpload } from "@/components/AudioFileUpload";
 import { AudioFilesList } from "@/components/AudioFilesList";
-import { formatTime, formatFileSize } from "@/lib/format";
 import { AudioFile } from "@/types/audio";
 import "@/styles/audio.css";
 
@@ -35,8 +30,6 @@ const Index = () => {
   const [audioFileSize, setAudioFileSize] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [currentAudioBlob, setCurrentAudioBlob] = useState<Blob | null>(null);
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
-  const [expandedSummaries, setExpandedSummaries] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -104,19 +97,47 @@ const Index = () => {
           schema: 'public',
           table: 'audio_uploads'
         },
-        (payload) => {
+        async (payload) => {
           console.log('Received update:', payload);
           const updatedRecord = payload.new as AudioFile;
           
+          // Update the audio files state immediately
+          setAudioFiles(prev => 
+            prev.map(file => 
+              file.id === updatedRecord.id ? updatedRecord : file
+            )
+          );
+          
           // If this is the file we're processing and it's now transcribed
-          if (updatedRecord.transcribed) {
+          if (updatedRecord.transcribed && !updatedRecord.summary) {
             toast({
               title: "Complete",
               description: "Your audio file has been transcribed",
             });
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+              console.error('No session found');
+              return;
+            }
+
+            console.log('Calling create_transcription_summary');
+            toast({
+              title: "Sending transcription",
+              description: "Your transcription is being processed",
+            });
+            const supaFunUrl = import.meta.env.VITE_SUPABASE_FUNCTIONS_URL;
+            await fetch(`${supaFunUrl}/v1/create_transcription_summary`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                id: updatedRecord.id,
+                transcription: updatedRecord.transcription
+              }),
+            });
           }
-          
-          fetchAudioFiles();
         }
       )
       .on(
@@ -128,7 +149,12 @@ const Index = () => {
         },
         (payload) => {
           console.log('Received insert:', payload);
-          fetchAudioFiles();
+          const newRecord = payload.new as AudioFile;
+
+          if (newRecord) {
+            setIsUploading(false);
+            setAudioFiles(prev => loadMore ? [...prev, newRecord] : [newRecord]);
+          }
         }
       )
       .subscribe((status) => {
@@ -165,7 +191,8 @@ const Index = () => {
   };
 
   const uploadAudio = async (file: File | Blob, duration?: number) => {
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    if (!userId) {
       toast({
         title: "Error",
         description: "You must be logged in to upload audio",
@@ -177,7 +204,7 @@ const Index = () => {
     try {
       setIsUploading(true);
       setUploadProgress(0);
-      const fileName = `audio-${Date.now()}.webm`;
+      const fileName = `audio-${userId}-${Date.now()}.webm`;
       
       // Simulate progress updates for better UX
       const progressInterval = setInterval(() => {
@@ -345,7 +372,7 @@ const Index = () => {
       <Navbar theme={theme} toggleTheme={toggleTheme} />
       
       <div className="container mx-auto px-4 py-8">
-        {(uploadProgress > 0) && (
+        {(uploadProgress > 0 && isUploading) && (
           <div className="mb-6 space-y-2">
             <Progress 
               value={uploadProgress} 
@@ -381,7 +408,7 @@ const Index = () => {
             isUploading={isUploading}
           />
           <AudioFileUpload
-            onFileSelect={handleFileChange}
+            onFileSelect={async (e) => { await handleFileChange(e); }}
             isUploading={isUploading}
           />
         </div>
