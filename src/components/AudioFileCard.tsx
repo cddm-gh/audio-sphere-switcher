@@ -100,11 +100,11 @@ export const AudioFileCard = ({
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-md bg-yellow-50 dark:bg-yellow-900/10 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 ring-1 ring-inset ring-yellow-700/10 whitespace-nowrap">
+                  <Loader2 className="h-3 w-3 animate-spin" />
                   Processing
                 </span>
-                <Loader2 className="h-4 w-4 animate-spin" />
               </div>
             )}
           </div>
