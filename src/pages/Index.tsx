@@ -112,7 +112,7 @@ const Index = () => {
           if (updatedRecord.transcribed && !updatedRecord.summary) {
             toast({
               title: "Transcription Completed",
-              description: "Your audio file has been transcribedand is being summarized now",
+              description: "Your audio file has been transcribed and is being summarized now",
               duration: 2000,
             });
             const { data: { session } } = await supabase.auth.getSession();

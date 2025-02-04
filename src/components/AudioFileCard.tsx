@@ -6,6 +6,8 @@ import { formatDistanceToNow } from "date-fns";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatTime, formatFileSize } from "@/lib/format";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface AudioFileCardProps {
   id: string;
@@ -30,6 +32,30 @@ export const AudioFileCard = ({
 }: AudioFileCardProps) => {
   const [showTranscription, setShowTranscription] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const { toast } = useToast();
+
+  const handleTranscribe = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('process-audio-file', {
+        body: { storage_path: filename, filename }
+      });
+      console.log('processing audio file: ', filename)
+
+      if (error) throw error;
+
+      toast({
+        title: "Transcription started",
+        description: "The audio file is being transcribed. This may take a few minutes.",
+      });
+    } catch (error) {
+      console.error('Error starting transcription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start transcription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Card key={id} className="relative">
@@ -43,6 +69,16 @@ export const AudioFileCard = ({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {!transcribed && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleTranscribe}
+                  className="text-sm whitespace-nowrap"
+                >
+                  Transcribe
+                </Button>
+              )}
               {transcribed && (
                 <Button
                   variant="ghost"
