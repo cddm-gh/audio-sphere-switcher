@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, Loader2, Trash2 } from "lucide-react";
+import { Upload, Loader2, Trash2, Check } from "lucide-react";
 import { formatTime, formatFileSize } from "@/lib/format";
 
 interface AudioPreviewProps {
@@ -10,6 +10,7 @@ interface AudioPreviewProps {
   onUpload: () => Promise<void>;
   onReset: () => void;
   isUploading: boolean;
+  isUploaded?: boolean;
 }
 
 export const AudioPreview = ({
@@ -18,7 +19,8 @@ export const AudioPreview = ({
   duration,
   onUpload,
   onReset,
-  isUploading
+  isUploading,
+  isUploaded = false
 }: AudioPreviewProps) => {
   return (
     <Card className="mb-6">
@@ -57,6 +59,11 @@ export const AudioPreview = ({
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Uploading...
+                  </>
+                ) : isUploaded ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Uploaded
                   </>
                 ) : (
                   <>

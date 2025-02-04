@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
         }
       ],
       max_tokens: 5000,
-      temperature: 0.7,
+      temperature: 0.4,
     }),
   });
 

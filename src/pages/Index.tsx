@@ -21,6 +21,7 @@ const Index = () => {
     return 'light';
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploaded, setIsUploaded] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
@@ -112,7 +113,7 @@ const Index = () => {
           if (updatedRecord.transcribed && !updatedRecord.summary) {
             toast({
               title: "Transcription Completed",
-              description: "Your audio file has been transcribedand is being summarized now",
+              description: "Your audio file has been transcribed and is being summarized now",
               duration: 2000,
             });
             const { data: { session } } = await supabase.auth.getSession();
@@ -245,6 +246,7 @@ const Index = () => {
       
       // Reset states immediately
       setIsUploading(false);
+      setIsUploaded(true);
 
       // Show success toast after states are updated
       toast({
@@ -399,6 +401,7 @@ const Index = () => {
             onUpload={handleUploadRecording}
             onReset={handleReset}
             isUploading={isUploading}
+            isUploaded={isUploaded}
           />
         )}
 
