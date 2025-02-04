@@ -21,6 +21,7 @@ const Index = () => {
     return 'light';
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploaded, setIsUploaded] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [session, setSession] = useState<any>(null);
   const { toast } = useToast();
@@ -245,6 +246,7 @@ const Index = () => {
       
       // Reset states immediately
       setIsUploading(false);
+      setIsUploaded(true);
 
       // Show success toast after states are updated
       toast({
@@ -399,6 +401,7 @@ const Index = () => {
             onUpload={handleUploadRecording}
             onReset={handleReset}
             isUploading={isUploading}
+            isUploaded={isUploaded}
           />
         )}
 
